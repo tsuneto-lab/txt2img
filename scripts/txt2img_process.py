@@ -1,5 +1,5 @@
-# Initially copied from CompVis/stable-diffusion/scripts/txt2img.py (and formatted)
-# Logics will be moved into Txt2img class gradually (and dependenc)
+# Initially copied from CompVis/stable-diffusion/scripts/txt2img.py
+# Logics are being moved into Txt2img class
 
 import argparse
 import os
@@ -42,17 +42,7 @@ def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
 
-
-def numpy_to_pil(images):
-    """
-    Convert a numpy image or a batch of images to a PIL image.
-    """
-    if images.ndim == 3:
-        images = images[None, ...]
-    images = (images * 255).round().astype("uint8")
-    pil_images = [Image.fromarray(image) for image in images]
-
-    return pil_images
+# moved def numpy_to_pil(images):
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -83,28 +73,8 @@ def put_watermark(img, wm_encoder=None):
     return img
 
 
-def load_replacement(x):
-    try:
-        hwc = x.shape
-        y = Image.open(
-            "assets/rick.jpeg").convert("RGB").resize((hwc[1], hwc[0]))
-        y = (np.array(y)/255.0).astype(x.dtype)
-        assert y.shape == x.shape
-        return y
-    except Exception:
-        return x
-
-
-def check_safety(x_image):
-    safety_checker_input = safety_feature_extractor(
-        numpy_to_pil(x_image), return_tensors="pt")
-    x_checked_image, has_nsfw_concept = safety_checker(
-        images=x_image, clip_input=safety_checker_input.pixel_values)
-    assert x_checked_image.shape[0] == len(has_nsfw_concept)
-    for i in range(len(has_nsfw_concept)):
-        if has_nsfw_concept[i]:
-            x_checked_image[i] = load_replacement(x_checked_image[i])
-    return x_checked_image, has_nsfw_concept
+# moved def load_replacement(x):
+# moved def check_safety(x_image):
 
 
 def main():
@@ -268,7 +238,8 @@ def main():
     else:
         sampler = DDIMSampler(model)
 
-    processor = Txt2imgProcessor(model, sampler)
+    processor = Txt2imgProcessor(
+        model, sampler, safety_feature_extractor, safety_checker)
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
@@ -311,22 +282,16 @@ def main():
                     for prompts in tqdm(data, desc="data"):
 
                         # some logic moved to Txt2imgProcessor
-                        x_samples_ddim = processor.process(scale=opt.scale,
-                                                           batch_size=batch_size,
-                                                           prompts=prompts,
-                                                           channels=opt.C,
-                                                           factor=opt.f,
-                                                           height=opt.H,
-                                                           width=opt.W,
-                                                           ddim_steps=opt.ddim_steps,
-                                                           ddim_eta=opt.ddim_eta,
-                                                           x_T=start_code)
-
-                        x_checked_image, has_nsfw_concept = check_safety(
-                            x_samples_ddim)
-
-                        x_checked_image_torch = torch.from_numpy(
-                            x_checked_image).permute(0, 3, 1, 2)
+                        x_checked_image_torch = processor.process(scale=opt.scale,
+                                                                  batch_size=batch_size,
+                                                                  prompts=prompts,
+                                                                  channels=opt.C,
+                                                                  factor=opt.f,
+                                                                  height=opt.H,
+                                                                  width=opt.W,
+                                                                  ddim_steps=opt.ddim_steps,
+                                                                  ddim_eta=opt.ddim_eta,
+                                                                  x_T=start_code)
 
                         if not opt.skip_save:
                             for x_sample in x_checked_image_torch:

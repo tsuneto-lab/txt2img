@@ -6,6 +6,8 @@ setup(
     description='',
     packages=find_packages(),
     install_requires=[
-        "torch"
+        "torch",
+        "numpy",
+        "Pillow"
     ],
 )
