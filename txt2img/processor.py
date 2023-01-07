@@ -1,6 +1,9 @@
 import torch
+import cv2
 import numpy as np
+from einops import rearrange
 from PIL import Image
+from imwatermark import WatermarkEncoder
 
 
 class Txt2imgProcessor:
@@ -9,6 +12,13 @@ class Txt2imgProcessor:
         self.sampler = sampler
         self.safety_feature_extractor = safety_feature_extractor
         self.safety_checker = safety_checker
+        self.wm_encoder = self.init_wm_encoder()
+
+    def init_wm_encoder(self):
+        wm = "StableDiffusionV1"
+        wm_encoder = WatermarkEncoder()
+        wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+        return wm_encoder
 
     def process(self, scale: float, batch_size: int, prompt: str, channels: int,
                 factor: int, height: int, width: int, ddim_steps: int,
@@ -38,7 +48,13 @@ class Txt2imgProcessor:
         x_checked_image_torch = torch.from_numpy(
             x_checked_image).permute(0, 3, 1, 2)
 
-        return x_checked_image_torch
+        imgs = []
+        for x_sample in x_checked_image_torch:
+            img = self.x_sample2img(x_sample)
+            img = self.put_watermark(img)
+            imgs.append(img)
+
+        return imgs
 
     def check_safety(self, x_image):
         safety_checker_input = self.safety_feature_extractor(
@@ -72,3 +88,17 @@ class Txt2imgProcessor:
             return y
         except Exception:
             return x
+
+    def x_sample2img(self, x_sample):
+        x_sample = 255. * \
+            rearrange(x_sample.cpu().numpy(),
+                      'c h w -> h w c')
+        return Image.fromarray(
+            x_sample.astype(np.uint8))
+
+    def put_watermark(self, img):
+        if self.wm_encoder is not None:
+            img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            img = self.wm_encoder.encode(img, 'dwtDct')
+            img = Image.fromarray(img[:, :, ::-1])
+        return img

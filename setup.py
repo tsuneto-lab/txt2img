@@ -8,6 +8,9 @@ setup(
     install_requires=[
         "torch",
         "numpy",
-        "Pillow"
+        "opencv-python",
+        "Pillow",
+        "einops",
+        "invisible-watermark"
     ],
 )

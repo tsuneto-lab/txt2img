@@ -3,13 +3,8 @@
 
 import argparse
 import os
-import cv2
 import torch
-import numpy as np
 from omegaconf import OmegaConf
-from PIL import Image
-from imwatermark import WatermarkEncoder
-from einops import rearrange
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import nullcontext
@@ -50,14 +45,6 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.cuda()
     model.eval()
     return model
-
-
-def put_watermark(img, wm_encoder=None):
-    if wm_encoder is not None:
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        img = wm_encoder.encode(img, 'dwtDct')
-        img = Image.fromarray(img[:, :, ::-1])
-    return img
 
 
 def main():
@@ -126,7 +113,7 @@ def main():
     parser.add_argument(
         "--n_samples",
         type=int,
-        default=3,
+        default=1,
         help="how many samples to produce for each given prompt. A.k.a. batch size",
     )
     parser.add_argument(
@@ -181,11 +168,6 @@ def main():
     processor = Txt2imgProcessor(
         model, sampler, safety_feature_extractor, safety_checker)
 
-    print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
-    wm = "StableDiffusionV1"
-    wm_encoder = WatermarkEncoder()
-    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
-
     sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))
 
@@ -193,24 +175,18 @@ def main():
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                x_checked_image_torch = processor.process(scale=opt.scale,
-                                                          batch_size=opt.n_samples,
-                                                          prompt=opt.prompt,
-                                                          channels=opt.C,
-                                                          factor=opt.f,
-                                                          height=opt.H,
-                                                          width=opt.W,
-                                                          ddim_steps=opt.ddim_steps,
-                                                          ddim_eta=opt.ddim_eta,
-                                                          x_T=None)
+                imgs = processor.process(scale=opt.scale,
+                                         batch_size=opt.n_samples,
+                                         prompt=opt.prompt,
+                                         channels=opt.C,
+                                         factor=opt.f,
+                                         height=opt.H,
+                                         width=opt.W,
+                                         ddim_steps=opt.ddim_steps,
+                                         ddim_eta=opt.ddim_eta,
+                                         x_T=None)
 
-                for x_sample in x_checked_image_torch:
-                    x_sample = 255. * \
-                        rearrange(x_sample.cpu().numpy(),
-                                  'c h w -> h w c')
-                    img = Image.fromarray(
-                        x_sample.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
+                for img in imgs:
                     img.save(os.path.join(
                         sample_path, f"{base_count:05}.png"))
                     base_count += 1
