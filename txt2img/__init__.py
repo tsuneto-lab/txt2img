@@ -1,1 +1,1 @@
-from .txt2img import Txt2img
+from .txt2img_processor import Txt2imgProcessor

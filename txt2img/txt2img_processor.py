@@ -1,3 +1,3 @@
-class Txt2img:
+class Txt2imgProcessor:
     def __init__(self):
         ...
