@@ -23,7 +23,7 @@ docker build . -t tsuneto-lab/txt2img
 # put a model (sd-v1-4.ckpt here) under $HOME/models/ and run
 docker run --rm --gpus all \
   -v $HOME/outputs:/app/outputs -v $HOME/models:/app/models/ldm/stable-diffusion-v1 \
-  tsuneto-lab/txt2img python3 scripts/txt2img.py --n_samples 1 \
+  tsuneto-lab/txt2img python3 scripts/txt2img_process.py --n_samples 1 \
   --ckpt /app/models/ldm/stable-diffusion-v1/sd-v1-4.ckpt \
   --prompt "a photograph of an astronaut riding a horse"
 
