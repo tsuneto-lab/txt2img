@@ -3,22 +3,16 @@
 
 import argparse
 import os
-import sys
-import glob
 import cv2
 import torch
 import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
-from tqdm import tqdm, trange
 from imwatermark import WatermarkEncoder
-from itertools import islice
 from einops import rearrange
-from torchvision.utils import make_grid
-import time
 from pytorch_lightning import seed_everything
 from torch import autocast
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -36,13 +30,6 @@ safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = AutoFeatureExtractor.from_pretrained(
     safety_model_id)
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
-
-
-def chunk(it, size):
-    it = iter(it)
-    return iter(lambda: tuple(islice(it, size)), ())
-
-# moved def numpy_to_pil(images):
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -73,10 +60,6 @@ def put_watermark(img, wm_encoder=None):
     return img
 
 
-# moved def load_replacement(x):
-# moved def check_safety(x_image):
-
-
 def main():
     parser = argparse.ArgumentParser()
 
@@ -95,11 +78,6 @@ def main():
         default="outputs/txt2img-samples"
     )
     parser.add_argument(
-        "--skip_save",
-        action='store_true',
-        help="do not save individual samples. For speed measurements.",
-    )
-    parser.add_argument(
         "--ddim_steps",
         type=int,
         default=50,
@@ -114,16 +92,6 @@ def main():
         "--dpm_solver",
         action='store_true',
         help="use dpm_solver sampling",
-    )
-    parser.add_argument(
-        "--laion400m",
-        action='store_true',
-        help="uses the LAION400M model",
-    )
-    parser.add_argument(
-        "--fixed_code",
-        action='store_true',
-        help="if enabled, uses the same starting code across samples ",
     )
     parser.add_argument(
         "--ddim_eta",
@@ -194,12 +162,6 @@ def main():
     )
     opt = parser.parse_args()
 
-    if opt.laion400m:
-        print("Falling back to LAION 400M model...")
-        opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
-        opt.ckpt = "models/ldm/text2img-large/model.ckpt"
-        opt.outdir = "outputs/txt2img-samples-laion400m"
-
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
@@ -219,38 +181,20 @@ def main():
     processor = Txt2imgProcessor(
         model, sampler, safety_feature_extractor, safety_checker)
 
-    os.makedirs(opt.outdir, exist_ok=True)
-    outpath = opt.outdir
-
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
     wm_encoder = WatermarkEncoder()
     wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
-    batch_size = opt.n_samples
-
-    # removed from_file
-    prompt = opt.prompt
-    assert prompt is not None
-
-    sample_path = os.path.join(outpath, "samples")
-    os.makedirs(sample_path, exist_ok=True)
+    sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))
-
-    start_code = None
-    if opt.fixed_code:
-        start_code = torch.randn(
-            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                tic = time.time()
-
-                # some logic moved to Txt2imgProcessor
                 x_checked_image_torch = processor.process(scale=opt.scale,
-                                                          batch_size=batch_size,
+                                                          batch_size=opt.n_samples,
                                                           prompt=opt.prompt,
                                                           channels=opt.C,
                                                           factor=opt.f,
@@ -258,23 +202,20 @@ def main():
                                                           width=opt.W,
                                                           ddim_steps=opt.ddim_steps,
                                                           ddim_eta=opt.ddim_eta,
-                                                          x_T=start_code)
+                                                          x_T=None)
 
-                if not opt.skip_save:
-                    for x_sample in x_checked_image_torch:
-                        x_sample = 255. * \
-                            rearrange(x_sample.cpu().numpy(),
-                                      'c h w -> h w c')
-                        img = Image.fromarray(
-                            x_sample.astype(np.uint8))
-                        img = put_watermark(img, wm_encoder)
-                        img.save(os.path.join(
-                            sample_path, f"{base_count:05}.png"))
-                        base_count += 1
+                for x_sample in x_checked_image_torch:
+                    x_sample = 255. * \
+                        rearrange(x_sample.cpu().numpy(),
+                                  'c h w -> h w c')
+                    img = Image.fromarray(
+                        x_sample.astype(np.uint8))
+                    img = put_watermark(img, wm_encoder)
+                    img.save(os.path.join(
+                        sample_path, f"{base_count:05}.png"))
+                    base_count += 1
 
-                toc = time.time()
-
-    print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
+    print(f"Your samples are ready and waiting for you here: \n{sample_path} \n"
           f" \nEnjoy.")
 
 
