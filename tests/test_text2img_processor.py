@@ -1,5 +1,5 @@
 import unittest
-from txt2img import Txt2imgProcessor
+from processor import Txt2imgProcessor
 
 
 class Txt2imgTestCase(unittest.TestCase):

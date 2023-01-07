@@ -25,6 +25,8 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.dpm_solver import DPMSolverSampler
 
+from processor import Txt2imgProcessor
+
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
@@ -266,6 +268,8 @@ def main():
     else:
         sampler = DDIMSampler(model)
 
+    processor = Txt2imgProcessor(model, sampler)
+
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
@@ -305,28 +309,18 @@ def main():
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
-                        uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(
-                                batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
-                        shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                        samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                         conditioning=c,
-                                                         batch_size=opt.n_samples,
-                                                         shape=shape,
-                                                         verbose=False,
-                                                         unconditional_guidance_scale=opt.scale,
-                                                         unconditional_conditioning=uc,
-                                                         eta=opt.ddim_eta,
-                                                         x_T=start_code)
 
-                        x_samples_ddim = model.decode_first_stage(samples_ddim)
-                        x_samples_ddim = torch.clamp(
-                            (x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                        x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+                        # some logic moved to Txt2imgProcessor
+                        x_samples_ddim = processor.process(scale=opt.scale,
+                                                           batch_size=batch_size,
+                                                           prompts=prompts,
+                                                           channels=opt.C,
+                                                           factor=opt.f,
+                                                           height=opt.H,
+                                                           width=opt.W,
+                                                           ddim_steps=opt.ddim_steps,
+                                                           ddim_eta=opt.ddim_eta,
+                                                           x_T=start_code)
 
                         x_checked_image, has_nsfw_concept = check_safety(
                             x_samples_ddim)
