@@ -10,16 +10,14 @@ class Txt2imgProcessor:
         self.safety_feature_extractor = safety_feature_extractor
         self.safety_checker = safety_checker
 
-    def process(self, scale: float, batch_size: int, prompts, channels: int,
+    def process(self, scale: float, batch_size: int, prompt: str, channels: int,
                 factor: int, height: int, width: int, ddim_steps: int,
                 ddim_eta: float, x_T):
         uc = None
         if scale != 1.0:
             uc = self.model.get_learned_conditioning(
                 batch_size * [""])
-        if isinstance(prompts, tuple):
-            prompts = list(prompts)
-        c = self.model.get_learned_conditioning(prompts)
+        c = self.model.get_learned_conditioning(batch_size * [prompt])
         shape = [channels, height // factor, width // factor]
         samples_ddim, _ = self.sampler.sample(S=ddim_steps,
                                               conditioning=c,

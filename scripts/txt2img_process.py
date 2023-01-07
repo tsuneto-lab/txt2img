@@ -137,12 +137,6 @@ def main():
         help="ddim eta (eta=0.0 corresponds to deterministic sampling",
     )
     parser.add_argument(
-        "--n_iter",
-        type=int,
-        default=2,
-        help="sample this often",
-    )
-    parser.add_argument(
         "--H",
         type=int,
         default=512,
@@ -183,11 +177,6 @@ def main():
         type=float,
         default=7.5,
         help="unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))",
-    )
-    parser.add_argument(
-        "--from-file",
-        type=str,
-        help="if specified, load prompts from this file",
     )
     parser.add_argument(
         "--config",
@@ -250,22 +239,14 @@ def main():
     wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
     batch_size = opt.n_samples
-    n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-    if not opt.from_file:
-        prompt = opt.prompt
-        assert prompt is not None
-        data = [batch_size * [prompt]]
 
-    else:
-        print(f"reading prompts from {opt.from_file}")
-        with open(opt.from_file, "r") as f:
-            data = f.read().splitlines()
-            data = list(chunk(data, batch_size))
+    # removed from_file
+    prompt = opt.prompt
+    assert prompt is not None
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
-    grid_count = len(os.listdir(outpath)) - 1
 
     start_code = None
     if opt.fixed_code:
@@ -277,51 +258,30 @@ def main():
         with precision_scope("cuda"):
             with model.ema_scope():
                 tic = time.time()
-                all_samples = list()
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in tqdm(data, desc="data"):
 
-                        # some logic moved to Txt2imgProcessor
-                        x_checked_image_torch = processor.process(scale=opt.scale,
-                                                                  batch_size=batch_size,
-                                                                  prompts=prompts,
-                                                                  channels=opt.C,
-                                                                  factor=opt.f,
-                                                                  height=opt.H,
-                                                                  width=opt.W,
-                                                                  ddim_steps=opt.ddim_steps,
-                                                                  ddim_eta=opt.ddim_eta,
-                                                                  x_T=start_code)
+                # some logic moved to Txt2imgProcessor
+                x_checked_image_torch = processor.process(scale=opt.scale,
+                                                          batch_size=batch_size,
+                                                          prompt=opt.prompt,
+                                                          channels=opt.C,
+                                                          factor=opt.f,
+                                                          height=opt.H,
+                                                          width=opt.W,
+                                                          ddim_steps=opt.ddim_steps,
+                                                          ddim_eta=opt.ddim_eta,
+                                                          x_T=start_code)
 
-                        if not opt.skip_save:
-                            for x_sample in x_checked_image_torch:
-                                x_sample = 255. * \
-                                    rearrange(x_sample.cpu().numpy(),
-                                              'c h w -> h w c')
-                                img = Image.fromarray(
-                                    x_sample.astype(np.uint8))
-                                img = put_watermark(img, wm_encoder)
-                                img.save(os.path.join(
-                                    sample_path, f"{base_count:05}.png"))
-                                base_count += 1
-
-                        if not opt.skip_grid:
-                            all_samples.append(x_checked_image_torch)
-
-                if not opt.skip_grid:
-                    # additionally, save as grid
-                    grid = torch.stack(all_samples, 0)
-                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                    grid = make_grid(grid, nrow=n_rows)
-
-                    # to image
-                    grid = 255. * \
-                        rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    img = Image.fromarray(grid.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
-                    img.save(os.path.join(
-                        outpath, f'grid-{grid_count:04}.png'))
-                    grid_count += 1
+                if not opt.skip_save:
+                    for x_sample in x_checked_image_torch:
+                        x_sample = 255. * \
+                            rearrange(x_sample.cpu().numpy(),
+                                      'c h w -> h w c')
+                        img = Image.fromarray(
+                            x_sample.astype(np.uint8))
+                        img = put_watermark(img, wm_encoder)
+                        img.save(os.path.join(
+                            sample_path, f"{base_count:05}.png"))
+                        base_count += 1
 
                 toc = time.time()
 
