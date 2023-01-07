@@ -95,11 +95,6 @@ def main():
         default="outputs/txt2img-samples"
     )
     parser.add_argument(
-        "--skip_grid",
-        action='store_true',
-        help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",
-    )
-    parser.add_argument(
         "--skip_save",
         action='store_true',
         help="do not save individual samples. For speed measurements.",
@@ -165,12 +160,6 @@ def main():
         type=int,
         default=3,
         help="how many samples to produce for each given prompt. A.k.a. batch size",
-    )
-    parser.add_argument(
-        "--n_rows",
-        type=int,
-        default=0,
-        help="rows in the grid (default: n_samples)",
     )
     parser.add_argument(
         "--scale",
