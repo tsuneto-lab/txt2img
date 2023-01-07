@@ -1,1 +1,2 @@
--e .
+-r requirements-remote.txt
+-r requirements-local.txt
