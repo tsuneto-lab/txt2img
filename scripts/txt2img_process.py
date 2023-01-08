@@ -19,6 +19,13 @@ def main():
         help="the prompt to render"
     )
     parser.add_argument(
+        "--neg_prompt",
+        type=str,
+        nargs="?",
+        default="",
+        help="the negative prompt"
+    )
+    parser.add_argument(
         "--outdir",
         type=str,
         nargs="?",
@@ -111,6 +118,7 @@ def main():
     imgs = processor.process(scale=opt.scale,
                              batch_size=opt.n_samples,
                              prompt=opt.prompt,
+                             negative_prompt=opt.neg_prompt,
                              channels=opt.C,
                              factor=opt.f,
                              height=opt.H,

@@ -25,7 +25,8 @@ docker run --rm --gpus all \
   -v $HOME/outputs:/app/outputs -v $HOME/models:/app/models/ldm/stable-diffusion-v1 \
   tsuneto-lab/txt2img python3 scripts/txt2img_process.py --n_samples 1 \
   --ckpt /app/models/ldm/stable-diffusion-v1/sd-v1-4.ckpt \
-  --prompt "a photograph of an astronaut riding a horse"
+  --prompt "a photograph of an astronaut riding a horse" \
+  --neg_prompt ""
 
 # it would be convenient to access outputs dir from windows explorer (if wsl)
 # as well as simply serve the directory:
@@ -39,4 +40,15 @@ conda env create -f environment.yaml
 conda activate txt2img-dev
 # install required packages mainly for vscode integration such as autocomplete and popups
 # if you don't need them, you can just build and run the docker container
+```
+
+Try out changes without rebuilding the image:
+
+```bash
+docker run --rm --gpus all \
+  -v $(pwd)/txt2img:/app/txt2img -v $(pwd)/scripts:/app/scripts \
+  -v $HOME/outputs:/app/outputs -v $HOME/models:/app/models/ldm/stable-diffusion-v1 \
+  tsuneto-lab/txt2img python3 scripts/txt2img_process.py --n_samples 1 \
+  --ckpt /app/models/ldm/stable-diffusion-v1/sd-v1-4.ckpt \
+  --prompt "a photograph of an astronaut riding a horse"
 ```

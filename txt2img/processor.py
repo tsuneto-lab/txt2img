@@ -23,15 +23,15 @@ class Txt2imgProcessor:
         wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
         return wm_encoder
 
-    def process(self, scale: float, batch_size: int, prompt: str, channels: int,
-                factor: int, height: int, width: int, ddim_steps: int,
+    def process(self, scale: float, batch_size: int, prompt: str, negative_prompt: str,
+                channels: int, factor: int, height: int, width: int, ddim_steps: int,
                 ddim_eta: float, x_T: torch.Tensor):
         with torch.no_grad():
             with self.precision_scope("cuda"):
                 uc = None
                 if scale != 1.0:
                     uc = self.model.get_learned_conditioning(
-                        batch_size * [""])
+                        batch_size * [negative_prompt])
                 c = self.model.get_learned_conditioning(batch_size * [prompt])
                 shape = [channels, height // factor, width // factor]
                 samples_ddim, _ = self.sampler.sample(S=ddim_steps,
