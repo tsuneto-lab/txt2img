@@ -3,11 +3,8 @@
 
 import argparse
 import os
-import torch
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
-from torch import autocast
-from contextlib import nullcontext
 
 from txt2img.create_processor import create_processor
 
@@ -113,29 +110,27 @@ def main():
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    processor = create_processor(config, f"{opt.ckpt}", opt.sampler)
+    processor = create_processor(
+        config, f"{opt.ckpt}", opt.sampler, opt.precision)
 
     sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))
 
-    precision_scope = autocast if opt.precision == "autocast" else nullcontext
-    with torch.no_grad():
-        with precision_scope("cuda"):
-            imgs = processor.process(scale=opt.scale,
-                                     batch_size=opt.n_samples,
-                                     prompt=opt.prompt,
-                                     channels=opt.C,
-                                     factor=opt.f,
-                                     height=opt.H,
-                                     width=opt.W,
-                                     ddim_steps=opt.ddim_steps,
-                                     ddim_eta=opt.ddim_eta,
-                                     x_T=None)
+    imgs = processor.process(scale=opt.scale,
+                             batch_size=opt.n_samples,
+                             prompt=opt.prompt,
+                             channels=opt.C,
+                             factor=opt.f,
+                             height=opt.H,
+                             width=opt.W,
+                             ddim_steps=opt.ddim_steps,
+                             ddim_eta=opt.ddim_eta,
+                             x_T=None)
 
-            for img in imgs:
-                img.save(os.path.join(
-                    sample_path, f"{base_count:05}.png"))
-                base_count += 1
+    for img in imgs:
+        img.save(os.path.join(
+            sample_path, f"{base_count:05}.png"))
+        base_count += 1
 
     print(f"Your samples are ready and waiting for you here: \n{sample_path} \n"
           f" \nEnjoy.")

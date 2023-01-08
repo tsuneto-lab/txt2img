@@ -4,15 +4,18 @@ import numpy as np
 from einops import rearrange
 from PIL import Image
 from imwatermark import WatermarkEncoder
+from torch import autocast
+from contextlib import nullcontext
 
 
 class Txt2imgProcessor:
-    def __init__(self, model, sampler, safety_feature_extractor, safety_checker):
+    def __init__(self, model, sampler, safety_feature_extractor, safety_checker, precision: str):
         self.model = model
         self.sampler = sampler
         self.safety_feature_extractor = safety_feature_extractor
         self.safety_checker = safety_checker
         self.wm_encoder = self.init_wm_encoder()
+        self.precision_scope = autocast if precision == "autocast" else nullcontext
 
     def init_wm_encoder(self):
         wm = "StableDiffusionV1"
@@ -23,38 +26,41 @@ class Txt2imgProcessor:
     def process(self, scale: float, batch_size: int, prompt: str, channels: int,
                 factor: int, height: int, width: int, ddim_steps: int,
                 ddim_eta: float, x_T: torch.Tensor):
-        uc = None
-        if scale != 1.0:
-            uc = self.model.get_learned_conditioning(
-                batch_size * [""])
-        c = self.model.get_learned_conditioning(batch_size * [prompt])
-        shape = [channels, height // factor, width // factor]
-        samples_ddim, _ = self.sampler.sample(S=ddim_steps,
-                                              conditioning=c,
-                                              batch_size=batch_size,
-                                              shape=shape,
-                                              verbose=False,
-                                              unconditional_guidance_scale=scale,
-                                              unconditional_conditioning=uc,
-                                              eta=ddim_eta,
-                                              x_T=x_T)
+        with torch.no_grad():
+            with self.precision_scope("cuda"):
+                uc = None
+                if scale != 1.0:
+                    uc = self.model.get_learned_conditioning(
+                        batch_size * [""])
+                c = self.model.get_learned_conditioning(batch_size * [prompt])
+                shape = [channels, height // factor, width // factor]
+                samples_ddim, _ = self.sampler.sample(S=ddim_steps,
+                                                      conditioning=c,
+                                                      batch_size=batch_size,
+                                                      shape=shape,
+                                                      verbose=False,
+                                                      unconditional_guidance_scale=scale,
+                                                      unconditional_conditioning=uc,
+                                                      eta=ddim_eta,
+                                                      x_T=x_T)
 
-        x_samples_ddim = self.model.decode_first_stage(samples_ddim)
-        x_samples_ddim = torch.clamp(
-            (x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-        x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+                x_samples_ddim = self.model.decode_first_stage(samples_ddim)
+                x_samples_ddim = torch.clamp(
+                    (x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
-        x_checked_image, has_nsfw_concept = self.check_safety(x_samples_ddim)
-        x_checked_image_torch = torch.from_numpy(
-            x_checked_image).permute(0, 3, 1, 2)
+                x_checked_image, has_nsfw_concept = self.check_safety(
+                    x_samples_ddim)
+                x_checked_image_torch = torch.from_numpy(
+                    x_checked_image).permute(0, 3, 1, 2)
 
-        imgs = []
-        for x_sample in x_checked_image_torch:
-            img = self.x_sample2img(x_sample)
-            img = self.put_watermark(img)
-            imgs.append(img)
+                imgs = []
+                for x_sample in x_checked_image_torch:
+                    img = self.x_sample2img(x_sample)
+                    img = self.put_watermark(img)
+                    imgs.append(img)
 
-        return imgs
+                return imgs
 
     def check_safety(self, x_image):
         safety_checker_input = self.safety_feature_extractor(

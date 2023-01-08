@@ -17,7 +17,7 @@ safety_feature_extractor = AutoFeatureExtractor.from_pretrained(
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 
-def create_processor(config, ckpt: str, sampler: str):
+def create_processor(config, ckpt: str, sampler: str, precision: str):
     model = load_model_from_config(config, ckpt)
 
     if sampler == "dpm_solver":
@@ -27,6 +27,6 @@ def create_processor(config, ckpt: str, sampler: str):
     else:
         sampler = DDIMSampler(model)
     processor = Txt2imgProcessor(
-        model, sampler, safety_feature_extractor, safety_checker)
+        model, sampler, safety_feature_extractor, safety_checker, precision)
 
     return processor
