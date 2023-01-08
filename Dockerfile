@@ -13,14 +13,10 @@ COPY ./requirements-remote.txt /app/requirements-remote.txt
 WORKDIR /app
 RUN pip3 install -r requirements-remote.txt
 
+COPY . /app
+
 # Install local package (dependencies of itself)
-COPY setup.py requirements-local.txt requirements.txt /app/
 RUN pip3 install -r requirements.txt
 
 # cache transformer pretrained models
-COPY txt2img/configs /app/txt2img/configs
-COPY scripts/txt2img_prefetch.py /app/scripts/txt2img_prefetch.py
 RUN python3 scripts/txt2img_prefetch.py
-
-# copy rest of the project and install (so local change would affect only this layer)
-COPY . /app

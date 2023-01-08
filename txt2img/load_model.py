@@ -1,5 +1,12 @@
 import torch
+import importlib.resources as pkg_resources
+from omegaconf import OmegaConf
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from transformers import AutoFeatureExtractor
+
 from ldm.util import instantiate_from_config
+
+from . import configs
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -25,3 +32,14 @@ def load_model_from_config(config, ckpt, verbose=False):
     model = model.to(device)
 
     return model
+
+
+def prefetch():
+    # load safety model
+    safety_model_id = "CompVis/stable-diffusion-safety-checker"
+    AutoFeatureExtractor.from_pretrained(safety_model_id)
+    StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+
+    config_txt = pkg_resources.read_text(configs, "sd-v1-inference.yaml")
+    config = OmegaConf.create(config_txt)
+    instantiate_from_config(config.model)
