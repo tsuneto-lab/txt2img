@@ -1,0 +1,6 @@
+name: txt2img-dev
+dependencies:
+  - python=3.8.5
+  - pip=20.3
+  - pip:
+    - -r requirements.txt

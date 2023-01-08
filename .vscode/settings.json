@@ -1,0 +1,6 @@
+{
+  "python.formatting.provider": "autopep8",
+  "python.autoComplete.extraPaths": [
+    "${env:CONDA_PREFIX}/envs/txt2img-dev/lib/python3.8/site-packages/"
+  ]
+}

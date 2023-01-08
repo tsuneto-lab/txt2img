@@ -3,7 +3,7 @@ txt2img module for stable-diffusion
 
 ## Aim
 
-- A simple txt2img-processor Class with simple interface that can be embedded into command line scripts, REST servers, queue consumers, twitter bots, etc.
+- A simple txt2img-processor Class that wraps stable-diffusion and can be embedded into command line scripts, REST servers, queue consumers, twitter bots, etc.
 - [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion) as external dependency
 
 ## How to use
@@ -30,4 +30,13 @@ docker run --rm --gpus all \
 # it would be convenient to access outputs dir from windows explorer (if wsl)
 # as well as simply serve the directory:
 # python3 -m http.server 8080 --bind 0.0.0.0 --directory $HOME/outputs
+```
+
+## Develop Environment
+
+```bash
+conda env create -f environment.yaml
+conda activate txt2img-dev
+# install required packages mainly for vscode integration such as autocomplete and popups
+# if you don't need them, you can just build and run the docker container
 ```

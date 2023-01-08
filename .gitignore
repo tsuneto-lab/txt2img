@@ -1,6 +1,10 @@
-.vscode
+.vscode/*
+!.vscode/settings.json
 
 __pycache__
 *.egg-info
+
+# packages installed by pip install -e
+/src
 
 !.gitkeep
