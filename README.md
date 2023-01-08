@@ -1,14 +1,27 @@
 # txt2img
 txt2img module for stable-diffusion
 
-## Aim
+## How to start
 
-- A simple txt2img-processor Class that wraps stable-diffusion and can be embedded into command line scripts, REST servers, queue consumers, twitter bots, etc.
-- [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion) as external dependency
+```bash
+pip install git+https://github.com/tsuneto-lab/txt2img.git@main#egg=txt2img
+```
 
-## How to use
+Also, you can use examples/* files to start your project.
 
-You can start with trying out txt2img.py script in docker.  
+```bash
+cp -r examples/* $PATH_TO_YOUR_PROJECT
+cd $PATH_TO_YOUR_PROJECT
+
+docker build . -t dev
+docker run dev
+```
+
+As a reference, please look into scripts/txt2img_process.py as a reference.  
+
+## txt2img_process script
+
+You can start with trying out txt2img_process.py script in docker.  
 It requires nvidia-docker setup.  
 FYI, ansible playbook for setting up nvidia-docker in WSL2: https://github.com/tsuneto-lab/wsl-setup
 
