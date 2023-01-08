@@ -3,9 +3,9 @@
 
 import argparse
 import os
-from pytorch_lightning import seed_everything
 
 from txt2img.create_processor import create_processor
+from txt2img.seed_everything import seed_everything
 
 
 def main():

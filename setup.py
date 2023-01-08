@@ -15,6 +15,7 @@ setup(
         "invisible-watermark",
         "omegaconf",
         "transformers",
+        "pytorch-lightning",
         # install a fork of stable-diffusion (for better package discovery)
         "latent-diffusion @ git+https://github.com/tsuneto-lab/stable-diffusion.git@33b08bff#egg=latent-diffusion",
         # below required by stable diffusion
