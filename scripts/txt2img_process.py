@@ -110,7 +110,7 @@ def main():
     seed_everything(opt.seed)
 
     processor = create_processor(
-        f"{opt.ckpt}", opt.sampler, opt.precision)
+        f"{opt.ckpt}", opt.sampler, opt.precision, nsfw_replacement="assets/cat.jpg")
 
     sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))

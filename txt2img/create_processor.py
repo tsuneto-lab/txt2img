@@ -20,7 +20,7 @@ safety_feature_extractor = AutoFeatureExtractor.from_pretrained(
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 
-def create_processor(ckpt: str, sampler: str, precision: str):
+def create_processor(ckpt: str, sampler: str, precision: str, nsfw_replacement: str):
     config_txt = pkg_resources.read_text(configs, "sd-v1-inference.yaml")
     config = OmegaConf.create(config_txt)
     model = load_model_from_config(config, ckpt)
@@ -33,6 +33,6 @@ def create_processor(ckpt: str, sampler: str, precision: str):
         sampler = DDIMSampler(model)
 
     processor = Txt2imgProcessor(
-        model, sampler, safety_feature_extractor, safety_checker, precision)
+        model, sampler, safety_feature_extractor, safety_checker, precision, nsfw_replacement)
 
     return processor

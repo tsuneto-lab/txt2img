@@ -9,13 +9,14 @@ from contextlib import nullcontext
 
 
 class Txt2imgProcessor:
-    def __init__(self, model, sampler, safety_feature_extractor, safety_checker, precision: str):
+    def __init__(self, model, sampler, safety_feature_extractor, safety_checker, precision: str, nsfw_replacement):
         self.model = model
         self.sampler = sampler
         self.safety_feature_extractor = safety_feature_extractor
         self.safety_checker = safety_checker
         self.wm_encoder = self.init_wm_encoder()
         self.precision_scope = autocast if precision == "autocast" else nullcontext
+        self.nsfw_replacement = nsfw_replacement
 
     def init_wm_encoder(self):
         wm = "StableDiffusionV1"
@@ -87,8 +88,8 @@ class Txt2imgProcessor:
     def load_replacement(self, x):
         try:
             hwc = x.shape
-            y = Image.open(
-                "assets/cat.jpg").convert("RGB").resize((hwc[1], hwc[0]))
+            y = Image.open(self.nsfw_replacement).convert(
+                "RGB").resize((hwc[1], hwc[0]))
             y = (np.array(y)/255.0).astype(x.dtype)
             assert y.shape == x.shape
             return y
