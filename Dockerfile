@@ -18,7 +18,7 @@ COPY setup.py requirements-local.txt requirements.txt /app/
 RUN pip3 install -r requirements.txt
 
 # cache transformer pretrained models
-COPY configs /app/configs
+COPY txt2img/configs /app/txt2img/configs
 COPY scripts/txt2img_prefetch.py /app/scripts/txt2img_prefetch.py
 RUN python3 scripts/txt2img_prefetch.py
 

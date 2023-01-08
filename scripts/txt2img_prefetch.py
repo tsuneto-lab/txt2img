@@ -9,5 +9,5 @@ safety_model_id = "CompVis/stable-diffusion-safety-checker"
 AutoFeatureExtractor.from_pretrained(safety_model_id)
 StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
-config = OmegaConf.load("configs/stable-diffusion/v1-inference.yaml")
+config = OmegaConf.load("txt2img/configs/sd-v1-inference.yaml")
 instantiate_from_config(config.model)

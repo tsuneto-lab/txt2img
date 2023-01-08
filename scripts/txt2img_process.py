@@ -1,9 +1,8 @@
 # Initially copied from CompVis/stable-diffusion/scripts/txt2img.py
-# Logics are being moved into Txt2img class
+# Logics are being moved into local txt2img package
 
 import argparse
 import os
-from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
 
 from txt2img.create_processor import create_processor
@@ -81,12 +80,6 @@ def main():
         help="unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))",
     )
     parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/stable-diffusion/v1-inference.yaml",
-        help="path to config which constructs model",
-    )
-    parser.add_argument(
         "--ckpt",
         type=str,
         default="models/ldm/stable-diffusion-v1/model.ckpt",
@@ -109,9 +102,8 @@ def main():
 
     seed_everything(opt.seed)
 
-    config = OmegaConf.load(f"{opt.config}")
     processor = create_processor(
-        config, f"{opt.ckpt}", opt.sampler, opt.precision)
+        f"{opt.ckpt}", opt.sampler, opt.precision)
 
     sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))
