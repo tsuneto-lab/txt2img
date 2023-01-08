@@ -9,42 +9,7 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import nullcontext
 
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
-from ldm.models.diffusion.dpm_solver import DPMSolverSampler
-
-from txt2img import Txt2imgProcessor
-
-from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
-from transformers import AutoFeatureExtractor
-
-
-# load safety model
-safety_model_id = "CompVis/stable-diffusion-safety-checker"
-safety_feature_extractor = AutoFeatureExtractor.from_pretrained(
-    safety_model_id)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
-
-
-def load_model_from_config(config, ckpt, verbose=False):
-    print(f"Loading model from {ckpt}")
-    pl_sd = torch.load(ckpt, map_location="cpu")
-    if "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
-    sd = pl_sd["state_dict"]
-    model = instantiate_from_config(config.model)
-    m, u = model.load_state_dict(sd, strict=False)
-    if len(m) > 0 and verbose:
-        print("missing keys:")
-        print(m)
-    if len(u) > 0 and verbose:
-        print("unexpected keys:")
-        print(u)
-
-    model.cuda()
-    model.eval()
-    return model
+from txt2img.create_processor import create_processor
 
 
 def main():
@@ -71,14 +36,10 @@ def main():
         help="number of ddim sampling steps",
     )
     parser.add_argument(
-        "--plms",
-        action='store_true',
-        help="use plms sampling",
-    )
-    parser.add_argument(
-        "--dpm_solver",
-        action='store_true',
-        help="use dpm_solver sampling",
+        "--sampler",
+        type=str,
+        help="specify sampler: [ddim(default), plms, dpm_solver]",
+        default="ddim"
     )
     parser.add_argument(
         "--ddim_eta",
@@ -152,21 +113,7 @@ def main():
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    model = load_model_from_config(config, f"{opt.ckpt}")
-
-    device = torch.device(
-        "cuda") if torch.cuda.is_available() else torch.device("cpu")
-    model = model.to(device)
-
-    if opt.dpm_solver:
-        sampler = DPMSolverSampler(model)
-    elif opt.plms:
-        sampler = PLMSSampler(model)
-    else:
-        sampler = DDIMSampler(model)
-
-    processor = Txt2imgProcessor(
-        model, sampler, safety_feature_extractor, safety_checker)
+    processor = create_processor(config, f"{opt.ckpt}", opt.sampler)
 
     sample_path = opt.outdir
     base_count = len(os.listdir(sample_path))
@@ -174,22 +121,21 @@ def main():
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
-            with model.ema_scope():
-                imgs = processor.process(scale=opt.scale,
-                                         batch_size=opt.n_samples,
-                                         prompt=opt.prompt,
-                                         channels=opt.C,
-                                         factor=opt.f,
-                                         height=opt.H,
-                                         width=opt.W,
-                                         ddim_steps=opt.ddim_steps,
-                                         ddim_eta=opt.ddim_eta,
-                                         x_T=None)
+            imgs = processor.process(scale=opt.scale,
+                                     batch_size=opt.n_samples,
+                                     prompt=opt.prompt,
+                                     channels=opt.C,
+                                     factor=opt.f,
+                                     height=opt.H,
+                                     width=opt.W,
+                                     ddim_steps=opt.ddim_steps,
+                                     ddim_eta=opt.ddim_eta,
+                                     x_T=None)
 
-                for img in imgs:
-                    img.save(os.path.join(
-                        sample_path, f"{base_count:05}.png"))
-                    base_count += 1
+            for img in imgs:
+                img.save(os.path.join(
+                    sample_path, f"{base_count:05}.png"))
+                base_count += 1
 
     print(f"Your samples are ready and waiting for you here: \n{sample_path} \n"
           f" \nEnjoy.")
