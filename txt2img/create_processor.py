@@ -3,6 +3,7 @@ import importlib.resources as pkg_resources
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 from omegaconf import OmegaConf
+from imwatermark import WatermarkEncoder
 
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -33,6 +34,13 @@ def create_processor(ckpt: str, sampler: str, precision: str, nsfw_replacement: 
         sampler = DDIMSampler(model)
 
     processor = Txt2imgProcessor(
-        model, sampler, safety_feature_extractor, safety_checker, precision, nsfw_replacement)
+        model, sampler, safety_feature_extractor, safety_checker, create_wm_encoder(), precision, nsfw_replacement)
 
     return processor
+
+
+def create_wm_encoder():
+    wm = "StableDiffusionV1"
+    wm_encoder = WatermarkEncoder()
+    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+    return wm_encoder

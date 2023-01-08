@@ -3,26 +3,19 @@ import cv2
 import numpy as np
 from einops import rearrange
 from PIL import Image
-from imwatermark import WatermarkEncoder
 from torch import autocast
 from contextlib import nullcontext
 
 
 class Txt2imgProcessor:
-    def __init__(self, model, sampler, safety_feature_extractor, safety_checker, precision: str, nsfw_replacement):
+    def __init__(self, model, sampler, safety_feature_extractor, safety_checker, wm_encoder, precision: str, nsfw_replacement: str):
         self.model = model
         self.sampler = sampler
         self.safety_feature_extractor = safety_feature_extractor
         self.safety_checker = safety_checker
-        self.wm_encoder = self.init_wm_encoder()
+        self.wm_encoder = wm_encoder
         self.precision_scope = autocast if precision == "autocast" else nullcontext
         self.nsfw_replacement = nsfw_replacement
-
-    def init_wm_encoder(self):
-        wm = "StableDiffusionV1"
-        wm_encoder = WatermarkEncoder()
-        wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
-        return wm_encoder
 
     def process(self, scale: float, batch_size: int, prompt: str, negative_prompt: str,
                 channels: int, factor: int, height: int, width: int, ddim_steps: int,
