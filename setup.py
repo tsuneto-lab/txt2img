@@ -9,8 +9,18 @@ setup(
         "torch",
         "numpy",
         "opencv-python",
+        "diffusers",
         "Pillow",
         "einops",
-        "invisible-watermark"
+        "invisible-watermark",
+        "omegaconf",
+        "transformers",
+        # install a fork of stable-diffusion (for better package discovery)
+        "latent-diffusion @ git+https://github.com/tsuneto-lab/stable-diffusion.git@33b08bff#egg=latent-diffusion",
+        # below required by stable diffusion
+        "torchmetrics==0.6.0",
+        "kornia",
+        "taming-transformers-rom1504",
+        "clip @ git+https://github.com/openai/CLIP.git@main#egg=clip"
     ],
 )

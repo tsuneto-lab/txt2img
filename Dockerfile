@@ -1,21 +1,17 @@
 FROM nvidia/cuda:11.3.1-base-ubuntu20.04
 # no 22.04 image for cuda 11.3
 
-# avoid being asked for timezone during apt install
+# avoid being asked about timezone during apt install
 ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt update && apt install -y --no-install-recommends libopencv-dev git python3 python3-pip \
   && rm -rf /var/lib/apt/lists/*
 
-# Install remote packages
-COPY ./requirements-remote.txt /app/requirements-remote.txt
-WORKDIR /app
-RUN pip3 install -r requirements-remote.txt
-
 COPY . /app
+WORKDIR /app
 
-# Install local package (dependencies of itself)
+# Install packages
 RUN pip3 install -r requirements.txt
 
 # cache transformer pretrained models
