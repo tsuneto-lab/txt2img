@@ -5,6 +5,7 @@ setup(
     version='0.0.1',
     description='',
     packages=find_packages(),
+    package_data={'txt2img.configs': ['*.yml', '*.yaml']}
     install_requires=[
         "torch",
         "numpy",
